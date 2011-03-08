@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/gentoo-quebec/!svn/ver/98/trunk/overlay/sys-kernel/mathieu-sources
+END
+Manifest
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/gentoo-quebec/!svn/ver/115/trunk/overlay/sys-kernel/mathieu-sources/Manifest
+END
+mathieu-sources-2.6.34.ebuild
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/gentoo-quebec/!svn/ver/115/trunk/overlay/sys-kernel/mathieu-sources/mathieu-sources-2.6.34.ebuild
+END

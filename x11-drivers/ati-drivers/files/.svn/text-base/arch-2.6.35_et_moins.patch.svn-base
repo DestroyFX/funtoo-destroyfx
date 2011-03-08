@@ -1,0 +1,12 @@
+diff -aur orig/lib/modules/fglrx/build_mod/kcl_ioctl.c final/lib/modules/fglrx/build_mod/kcl_ioctl.c
+--- orig/lib/modules/fglrx/build_mod/kcl_ioctl.c	2010-09-22 03:15:33.000000000 -0400
++++ final/lib/modules/fglrx/build_mod/kcl_ioctl.c	2010-10-12 02:58:37.685811001 -0400
+@@ -193,7 +193,7 @@
+  */
+ void* ATI_API_CALL KCL_IOCTL_AllocUserSpace32(long size)
+ {
+-    void __user *ret = COMPAT_ALLOC_USER_SPACE(size);
++    void __user *ret = compat_alloc_user_space(size);
+ 
+     /* prevent stack overflow */
+     if (!access_ok(VERIFY_WRITE, ret, size))

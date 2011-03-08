@@ -1,0 +1,143 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/gentoo-quebec/!svn/ver/79/trunk/overlay/x11-drivers/ati-drivers/files
+END
+ati-drivers-2.6.34.patch
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/gentoo-quebec/!svn/ver/113/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-2.6.34.patch
+END
+ati-drivers-xen.patch
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/gentoo-quebec/!svn/ver/97/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-xen.patch
+END
+ati-acpi-2.6.29-2.patch
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/gentoo-quebec/!svn/ver/101/trunk/overlay/x11-drivers/ati-drivers/files/ati-acpi-2.6.29-2.patch
+END
+ati-acpi-2.6.29.patch
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/gentoo-quebec/!svn/ver/77/trunk/overlay/x11-drivers/ati-drivers/files/ati-acpi-2.6.29.patch
+END
+ati-drivers-2.6.36.patch
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/gentoo-quebec/!svn/ver/121/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-2.6.36.patch
+END
+leaked-9-7-open_part.patch
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/gentoo-quebec/!svn/ver/101/trunk/overlay/x11-drivers/ati-drivers/files/leaked-9-7-open_part.patch
+END
+ati-drivers-2.6.38.patch
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/gentoo-quebec/!svn/ver/126/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-2.6.38.patch
+END
+ati-enable-msi.patch
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/gentoo-quebec/!svn/ver/101/trunk/overlay/x11-drivers/ati-drivers/files/ati-enable-msi.patch
+END
+libGL.la.in
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/gentoo-quebec/!svn/ver/71/trunk/overlay/x11-drivers/ati-drivers/files/libGL.la.in
+END
+ati-drivers-fix_compilation-bug-297322.patch
+K 25
+svn:wc:ra_dav:version-url
+V 120
+/svn/gentoo-quebec/!svn/ver/109/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-fix_compilation-bug-297322.patch
+END
+ati-xen-irq.patch
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svn/gentoo-quebec/!svn/ver/79/trunk/overlay/x11-drivers/ati-drivers/files/ati-xen-irq.patch
+END
+fglrx-2.6.34-rc4.patch
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svn/gentoo-quebec/!svn/ver/112/trunk/overlay/x11-drivers/ati-drivers/files/fglrx-2.6.34-rc4.patch
+END
+atieventsd.rc6
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/gentoo-quebec/!svn/ver/75/trunk/overlay/x11-drivers/ati-drivers/files/atieventsd.rc6
+END
+arch-2.6.35_et_moins.patch
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/gentoo-quebec/!svn/ver/123/trunk/overlay/x11-drivers/ati-drivers/files/arch-2.6.35_et_moins.patch
+END
+ati-irqreturn-2.patch
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/gentoo-quebec/!svn/ver/101/trunk/overlay/x11-drivers/ati-drivers/files/ati-irqreturn-2.patch
+END
+ati-powermode-opt-path-2.patch
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/gentoo-quebec/!svn/ver/97/trunk/overlay/x11-drivers/ati-drivers/files/ati-powermode-opt-path-2.patch
+END
+ati-irqreturn.patch
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svn/gentoo-quebec/!svn/ver/101/trunk/overlay/x11-drivers/ati-drivers/files/ati-irqreturn.patch
+END
+ati-2632.patch
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/gentoo-quebec/!svn/ver/97/trunk/overlay/x11-drivers/ati-drivers/files/ati-2632.patch
+END
+arch-2.6.36.patch
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svn/gentoo-quebec/!svn/ver/123/trunk/overlay/x11-drivers/ati-drivers/files/arch-2.6.36.patch
+END
+sema_init.patch
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/gentoo-quebec/!svn/ver/126/trunk/overlay/x11-drivers/ati-drivers/files/sema_init.patch
+END
+atieventsd.init
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/gentoo-quebec/!svn/ver/75/trunk/overlay/x11-drivers/ati-drivers/files/atieventsd.init
+END
+ati-drivers-2.6.33.1.patch
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/gentoo-quebec/!svn/ver/111/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-2.6.33.1.patch
+END
+ati-drivers-2.6.33.patch
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svn/gentoo-quebec/!svn/ver/109/trunk/overlay/x11-drivers/ati-drivers/files/ati-drivers-2.6.33.patch
+END

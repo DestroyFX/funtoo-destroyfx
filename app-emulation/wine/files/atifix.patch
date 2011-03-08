@@ -1,0 +1,69 @@
+From ce726b4cf111bb94ee5d9c40503f18d8910b59c4 Mon Sep 17 00:00:00 2001
+From: Robert Key <hpestilence@gmail.com>
+Date: Thu, 14 May 2009 21:03:16 -0400
+Subject: Add ATI dx10 card quirks
+
+---
+ dlls/wined3d/directx.c |   32 ++++++++++++++++++++++++++++++++
+ 1 files changed, 32 insertions(+), 0 deletions(-)
+
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 46c1556..8433277 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -4034,6 +4034,15 @@ static BOOL match_ati_r300_to_500(const WineD3D_GL_Info *gl_info) {
+     return FALSE;
+ }
+ 
++static BOOL match_ati_r600_to_700(const WineD3D_GL_Info *gl_info) {
++    if(gl_info->gl_vendor != VENDOR_ATI) return FALSE;
++    /* This should detect all ATI dx10 cards using fglrx before and
++     * after ATI fixes the number of reported varyings in their drivers.
++     */
++    if(strstr(gl_info->gl_renderer, "DRI")) return FALSE; /* Filter out Mesa DRI drivers */
++    if(gl_info->max_glsl_varyings == 64 || gl_info->max_glsl_varyings == 68) return TRUE;
++}
++
+ static BOOL match_geforce5(const WineD3D_GL_Info *gl_info) {
+     if(gl_info->gl_vendor == VENDOR_NVIDIA) {
+         if(gl_info->gl_card == CARD_NVIDIA_GEFORCEFX_5800 || gl_info->gl_card == CARD_NVIDIA_GEFORCEFX_5600) {
+@@ -4136,6 +4145,24 @@ static void quirk_ati_dx9(WineD3D_GL_Info *gl_info) {
+     gl_info->reserved_glsl_constants = max(gl_info->reserved_glsl_constants, 8);
+ }
+ 
++static void quirk_ati_dx10(WineD3D_GL_Info *gl_info) {
++    /* Currently a shader compile segfaults when attempting to use
++     * a varying array over 13 vec4 for HD3000 to HD4000 and 12 for HD2000.
++     * This also fixes buggy fglrx drivers trying to use 17 varying vec4s.
++     *
++     * This is temporary until drivers get fixed.
++     */
++    if(gl_info->max_glsl_varyings == 64 || gl_info->max_glsl_varyings == 68) {
++        TRACE_(d3d_caps)("Setting varyings to 48 to work around segmentation fault\n");
++        gl_info->max_glsl_varyings = 52;
++    }
++    /* This should take effect in buggy fglrx drivers but not in fixed drivers
++     */
++    if(gl_info->vs_glsl_constantsF < 256 && gl_info->ps_glsl_constantsF < 256) {
++        quirk_arb_constants(gl_info);
++    }
++}
++
+ static void quirk_no_np2(WineD3D_GL_Info *gl_info) {
+     /*  The nVidia GeForceFX series reports OpenGL 2.0 capabilities with the latest drivers versions, but
+      *  doesn't explicitly advertise the ARB_tex_npot extension in the GL extension string.
+@@ -4186,6 +4213,11 @@ struct driver_quirk quirk_table[] = {
+         quirk_ati_dx9,
+         "ATI GLSL constant and normalized texrect quirk"
+     },
++    {
++        match_ati_r600_to_700,
++        quirk_ati_dx10,
++        "ATI GLSL constant and varying quirk"
++    },
+     /* MacOS advertises more GLSL vertex shader uniforms than supported by the hardware, and if more are
+      * used it falls back to software. While the compiler can detect if the shader uses all declared
+      * uniforms, the optimization fails if the shader uses relative addressing. So any GLSL shader
+-- 
+1.6.3.1
+

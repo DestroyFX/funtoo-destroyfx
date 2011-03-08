@@ -1,0 +1,567 @@
+diff -Nur build_mod.orig/drm_os_linux.h build_mod/drm_os_linux.h
+--- build_mod.orig/drm_os_linux.h	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/drm_os_linux.h	2009-07-16 10:39:32.000000000 -0400
+@@ -40,8 +40,10 @@
+ 
+ /** IRQ handler arguments and return type and values */
+ #define DRM_IRQ_ARGS		int irq, void *arg, struct pt_regs *regs
+-/** backwards compatibility with old irq return values */
+-#ifndef IRQ_HANDLED
++/** backwards compatibility with old irq return values
++ * In 2.6.30 and newer IRQ_HANDLED is no longer a #define but an enum value
++ * IRQ_RETVAL is still defined in 2.6.30. */
++#ifndef IRQ_RETVAL
+ typedef void irqreturn_t;
+ #define IRQ_HANDLED   /* nothing */
+ #define IRQ_NONE      /* nothing */
+diff -Nur build_mod.orig/fglrxko_pci_ids.h build_mod/fglrxko_pci_ids.h
+--- build_mod.orig/fglrxko_pci_ids.h	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/fglrxko_pci_ids.h	2009-07-16 10:39:32.000000000 -0400
+@@ -24,6 +24,13 @@
+     FGL_ASIC_ID(0x9712),
+     FGL_ASIC_ID(0x9713),
+     FGL_ASIC_ID(0x9714),
++    FGL_ASIC_ID(0x6898),
++    FGL_ASIC_ID(0x6899),
++    FGL_ASIC_ID(0x689C),
++    FGL_ASIC_ID(0x689D),
++    FGL_ASIC_ID(0x68B8),
++    FGL_ASIC_ID(0x68B9),
++    FGL_ASIC_ID(0x68BE),
+     FGL_ASIC_ID(0x9400),
+     FGL_ASIC_ID(0x9401),
+     FGL_ASIC_ID(0x9402),
+@@ -79,6 +86,7 @@
+     FGL_ASIC_ID(0x94B5),
+     FGL_ASIC_ID(0x94B3),
+     FGL_ASIC_ID(0x94B1),
++    FGL_ASIC_ID(0x94B4),
+     FGL_ASIC_ID(0x9450),
+     FGL_ASIC_ID(0x944C),
+     FGL_ASIC_ID(0x9452),
+@@ -87,6 +95,9 @@
+     FGL_ASIC_ID(0x9440),
+     FGL_ASIC_ID(0x9460),
+     FGL_ASIC_ID(0x9462),
++    FGL_ASIC_ID(0x68B0),
++    FGL_ASIC_ID(0x68B1),
++    FGL_ASIC_ID(0x6890),
+     FGL_ASIC_ID(0x94C9),
+     FGL_ASIC_ID(0x94CB),
+     FGL_ASIC_ID(0x94C8),
+@@ -113,6 +124,13 @@
+     FGL_ASIC_ID(0x944B),
+     FGL_ASIC_ID(0x945A),
+     FGL_ASIC_ID(0x945B),
++    FGL_ASIC_ID(0x68A0),
++    FGL_ASIC_ID(0x68A1),
++    FGL_ASIC_ID(0x6888),
++    FGL_ASIC_ID(0x6889),
++    FGL_ASIC_ID(0x68A8),
++    FGL_ASIC_ID(0x68A9),
++    FGL_ASIC_ID(0x6880),
+     FGL_ASIC_ID(0x958F),
+     FGL_ASIC_ID(0x9595),
+     FGL_ASIC_ID(0x959B),
+diff -Nur build_mod.orig/firegl_public.c build_mod/firegl_public.c
+--- build_mod.orig/firegl_public.c	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/firegl_public.c	2009-07-16 10:39:32.000000000 -0400
+@@ -30,6 +30,7 @@
+ 
+ #include <linux/autoconf.h>
+ 
++#if !defined(CONFIG_X86) 
+ #if !defined(CONFIG_X86_PC) 
+ #if !defined(CONFIG_X86_64)
+ #if !defined(CONFIG_X86_VOYAGER)
+@@ -47,6 +48,7 @@
+ #endif
+ #endif
+ #endif
++#endif
+ 
+ /* The dirty-page-tracking patch included in NLD 9 SMP kernels defines
+  * a static inline function that uses a GPL-only symbol in a header
+@@ -79,6 +81,16 @@
+ #undef CONFIG_MEM_MIRROR
+ #endif /* CONFIG_MEM_MIRROR */
+ 
++/* To avoid compatibility issues with old kernels, only use DMA API 
++   for kernels configured to support hardware IOMMU in NB chipset.
++   Note, AMD and Intel have differnt iommu drivers in different loacations 
++   and they use different config options. These options can only be enabled
++   on x86_64 with newer 2.6 kernels (2.6.23 for intel, 2.6.26 for amd). 
++*/
++#if defined(CONFIG_AMD_IOMMU) || defined(CONFIG_DMAR)
++    #define FIREGL_DMA_REMAPPING
++#endif
++
+ // ============================================================
+ 
+ // always defined
+@@ -909,6 +921,11 @@
+                 return ret_code; 
+             }
+ 
++#ifdef FIREGL_DMA_REMAPPING
++            //The GART unit of All supported ASICs has 40-bit address range.
++            pci_set_dma_mask(pdev, 0xfffffffffful); 
++#endif
++
+             j++;
+             if (j == num_of_devices)
+             {
+@@ -1226,8 +1243,6 @@
+  */
+ int ATI_API_CALL KCL_SetPageCache_Array(unsigned long *pt, int pages, int enable)
+ {
+-    unsigned int i;
+-    int ret = 0;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)
+     if (enable)
+     {
+@@ -1238,6 +1253,8 @@
+         return set_memory_array_uc(pt, pages);
+     }  
+ #else               
++    unsigned int i;
++    int ret = 0;
+     for( i = 0; i < pages; i++ )
+     {
+         ret = KCL_SetPageCache((void *)pt[i], 1, enable);
+@@ -1448,7 +1465,11 @@
+  */
+ KCL_TYPE_Uid ATI_API_CALL KCL_GetEffectiveUid(void)
+ {
++#ifdef current_euid
++    return current_euid();
++#else
+     return current->euid;
++#endif
+ }
+ 
+ /** /brief Delay execution for the specified number of microseconds
+@@ -1513,15 +1534,6 @@
+     } while (period < wait_period);
+ }
+ 
+-/** /brief Convert virtual address to bus address
+- *  /param address Virtual address
+- *  /return Bus address
+- */
+-unsigned long ATI_API_CALL KCL_ConvertAddressVirtualToBus(void* address)
+-{
+-    return virt_to_bus(address);
+-}
+-
+ /** /brief Convert virtual address to physical address
+  *  /param address Virtual address
+  *  /return Physical address
+@@ -1531,13 +1543,44 @@
+     return virt_to_phys(address);
+ }
+ 
++unsigned long long ATI_API_CALL KCL_MapVirtualToPhysical(KCL_PCI_DevHandle pdev, void* address, unsigned long size)
++{
++#ifdef FIREGL_DMA_REMAPPING    
++    return (unsigned long long)pci_map_single(pdev, address, size, PCI_DMA_BIDIRECTIONAL);
++#else
++    return (unsigned long long)virt_to_phys(address);
++#endif
++}
++
++void ATI_API_CALL KCL_UnmapVirtualToPhysical(KCL_PCI_DevHandle pdev, unsigned long long bus_addr, unsigned long size)
++{
++#ifdef FIREGL_DMA_REMAPPING    
++    pci_unmap_single(pdev, (dma_addr_t)bus_addr, size, PCI_DMA_BIDIRECTIONAL);
++#endif
++}
++
+ /** \brief Convert a page pointer to physical address index
+  *  \param page pointer to a page
+  *  \return Physical address index(physical address >> PAGE_SHIFT) 
+  */
+-unsigned long ATI_API_CALL KCL_ConvertPageToPfn(void* page)
++unsigned long ATI_API_CALL KCL_MapPageToPfn(KCL_PCI_DevHandle pdev, void* page)
+ {
+-    return page_to_pfn((struct page*)page);
++    dma_addr_t bus_addr;
++    unsigned long page_index;
++#ifdef FIREGL_DMA_REMAPPING    
++    bus_addr = pci_map_page ((struct pci_dev*)pdev, (struct page*)page, 0, PAGE_SIZE, PCI_DMA_BIDIRECTIONAL);
++    page_index = (bus_addr >> PAGE_SHIFT);
++#else
++    page_index = page_to_pfn((struct page*)page);
++#endif
++    return page_index;
++}
++
++void ATI_API_CALL KCL_UnmapPageToPfn(KCL_PCI_DevHandle pdev, unsigned long long bus_addr)
++{
++#ifdef FIREGL_DMA_REMAPPING    
++    pci_unmap_page ((struct pci_dev*)pdev, (dma_addr_t)bus_addr, PAGE_SIZE, PCI_DMA_BIDIRECTIONAL);
++#endif
+ }
+ 
+ /** \brief Convert a page to kernel virtual address 
+@@ -1816,19 +1859,33 @@
+ 
+ /** \brief set/clear  CAP_IPC_LOCK on effective security capability
+  *  \param lock : 0 -- clear CAP_IPC_LOCK capability. 
+-                  else -- set CAP_IPC_LOCK 
++ *                else -- set CAP_IPC_LOCK 
++ *  \return 0 on success, negative errno on failure
+  */
+-void ATI_API_CALL KCL_PosixSecurityCapSetIPCLock(unsigned int lock)
++int ATI_API_CALL KCL_PosixSecurityCapSetIPCLock(unsigned int lock)
+ {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
++#   define fglrx_commit_creds(new_creds) commit_creds(new_creds)
++    struct cred *new_creds = prepare_creds();
++    if (new_creds == NULL)
++    {
++        KCL_DEBUG_ERROR ("Could not allocate memory for new process credentials.\n");
++        return -ENOMEM;
++    }
++#else
++#   define fglrx_commit_creds(new_creds) (0)
++    struct task_struct *new_creds = current;
++#endif
+     if (lock == 0 )
+     {
+-        cap_lower(current->cap_effective, CAP_IPC_LOCK);
++        cap_lower(new_creds->cap_effective, CAP_IPC_LOCK);
+     }
+     else
+     {
+-        cap_raise(current->cap_effective, CAP_IPC_LOCK);
++        cap_raise(new_creds->cap_effective, CAP_IPC_LOCK);
+     }    
+-    return; 
++    return fglrx_commit_creds (new_creds);
++#undef fglrx_commit_creds
+ }
+ 
+ /** \brief Get number of available RAM pages
+@@ -1924,8 +1981,8 @@
+ 
+ /** \brief free the page that originally allocated for gart usage
+  *  \param pt pointer to a page
+-*/ 
+-
++*/
++ 
+ void ATI_API_CALL KCL_MEM_FreePageForGart(void* pt)
+ {
+     __free_page(pt);
+@@ -2297,7 +2354,7 @@
+  *  /param va Virtual address of the page
+  *  /return void
+  */
+-void ATI_API_CALL KCL_flush_tlb_one(void *va)
++static void kcl_flush_tlb_one(void *va)
+ {
+     unsigned long *addr = (unsigned long *)va;
+     __flush_tlb_one(*addr);
+@@ -2315,11 +2372,12 @@
+  * kernel <  2.6.27, on_each_cpu has 4 parameters.
+  * kernel >= 2.6.27, on_each_cpu has 3 parameters (removed the "retry" parameter)
+  */
+-#if defined(__x86_64__) && (defined(__SMP__) || defined(CONFIG_SMP)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)) 
++#if ( defined(__x86_64__) && (defined(__SMP__) || defined(CONFIG_SMP)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))) || \
++    (!defined(__x86_64__) && (defined(__SMP__) || defined(CONFIG_SMP)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)))
+ #   if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27))
+-        on_each_cpu(KCL_flush_tlb_one, &va, 1, 1);
++        on_each_cpu(kcl_flush_tlb_one, &va, 1, 1);
+ #   else
+-        on_each_cpu(KCL_flush_tlb_one, &va, 1);
++        on_each_cpu(kcl_flush_tlb_one, &va, 1);
+ #   endif
+ #else
+     flush_tlb_page(vma, va);
+@@ -3146,6 +3204,11 @@
+     return vma->vm_file->private_data;
+ }
+ 
++void* ATI_API_CALL KCL_MEM_VM_GetRegionPrivateData(struct vm_area_struct* vma)
++{
++    return vma->vm_private_data;
++}
++
+ unsigned long ATI_API_CALL KCL_MEM_VM_GetRegionStart(struct vm_area_struct* vma)
+ {
+     return vma->vm_start;
+@@ -3464,7 +3527,8 @@
+ int ATI_API_CALL KCL_MEM_VM_MapRegion(KCL_IO_FILE_Handle filp,
+                              struct vm_area_struct* vma, unsigned long long offset,
+                              enum __ke_vm_maptype type,
+-                             int readonly)
++                             int readonly,
++                             void *private_data)
+ {
+     unsigned int pages;
+ 
+@@ -3675,6 +3739,7 @@
+     }
+ 
+     vma->vm_file = (struct file*)filp;    /* Needed for drm_vm_open() */
++    vma->vm_private_data = private_data;
+ 
+     return 0;
+ }
+diff -Nur build_mod.orig/firegl_public.h build_mod/firegl_public.h
+--- build_mod.orig/firegl_public.h	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/firegl_public.h	2009-07-16 10:39:32.000000000 -0400
+@@ -318,10 +318,11 @@
+ extern KCL_TYPE_Uid  ATI_API_CALL KCL_GetEffectiveUid(void);
+ extern void          ATI_API_CALL KCL_DelayInMicroSeconds(unsigned long usecs);
+ extern void          ATI_API_CALL KCL_DelayUseTSC(unsigned long usecs);
+-extern unsigned long ATI_API_CALL KCL_ConvertAddressVirtualToBus(void* address);
+ extern unsigned long ATI_API_CALL KCL_ConvertAddressVirtualToPhysical(void* address);
+-
+-extern unsigned long ATI_API_CALL KCL_ConvertPageToPfn(void* page);
++extern unsigned long long ATI_API_CALL KCL_MapVirtualToPhysical(KCL_PCI_DevHandle pdev, void* address, unsigned long size);
++extern void          ATI_API_CALL KCL_UnmapVirtualToPhysical(KCL_PCI_DevHandle pdev, unsigned long long bus_addr, unsigned long size);
++extern unsigned long ATI_API_CALL KCL_MapPageToPfn(KCL_PCI_DevHandle pdev, void* page);
++extern void          ATI_API_CALL KCL_UnmapPageToPfn(KCL_PCI_DevHandle pdev, unsigned long long bus_addr);
+ extern void*         ATI_API_CALL KCL_ConvertPageToKernelAddress(void* page);
+ extern unsigned int  ATI_API_CALL KCL_IsPageInHighMem(void* page);
+ 
+@@ -330,7 +331,7 @@
+ extern void          ATI_API_CALL KCL_GlobalKernelLock(void);
+ extern void          ATI_API_CALL KCL_GlobalKernelUnlock(void);
+ extern int           ATI_API_CALL KCL_PosixSecurityCapCheck(KCL_ENUM_PosixSecurityCap cap);
+-extern void          ATI_API_CALL KCL_PosixSecurityCapSetIPCLock(unsigned int lock);
++extern int           ATI_API_CALL KCL_PosixSecurityCapSetIPCLock(unsigned int lock);
+ extern unsigned long ATI_API_CALL KCL_GetAvailableRamPages(void);
+ extern void          ATI_API_CALL KCL_GetSystemMemInfo(KCL_SYS_MEM_INFO* info);
+ extern void          ATI_API_CALL KCL_ReserveMemPage(void* pt);
+@@ -521,6 +522,7 @@
+ /*****************************************************************************/
+ 
+ extern void* ATI_API_CALL KCL_MEM_VM_GetRegionFilePrivateData(struct vm_area_struct* vma);
++extern void* ATI_API_CALL KCL_MEM_VM_GetRegionPrivateData(struct vm_area_struct* vma);
+ extern unsigned long ATI_API_CALL KCL_MEM_VM_GetRegionStart(struct vm_area_struct* vma);
+ extern unsigned long ATI_API_CALL KCL_MEM_VM_GetRegionEnd(struct vm_area_struct* vma);
+ extern unsigned long ATI_API_CALL KCL_MEM_VM_GetRegionMapOffset(struct vm_area_struct* vma);
+@@ -548,7 +550,8 @@
+                                     struct vm_area_struct* vma,
+                                     unsigned long long offset,
+                                     enum __ke_vm_maptype type,
+-                                    int readonly);
++                                    int readonly,
++                                    void *private_data);
+ 
+ /*****************************************************************************/
+ 
+@@ -603,6 +606,13 @@
+ #define cpu_has_pge test_bit(X86_FEATURE_PGE, &boot_cpu_data.x86_capability)
+ #endif
+ 
++/* 2.6.29 defines pgprot_writecombine as a macro which resolves to a
++ * GPL-only function with the same name. So we always use our own
++ * definition on 2.6.29 and later. */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29) \
++    && defined (pgprot_writecombine)
++#undef pgprot_writecombine
++#endif
+ #ifndef pgprot_writecombine
+ #define pgprot_writecombine(prot) __pgprot((pgprot_val(prot) & ~(_PAGE_PCD)) | _PAGE_PWT)
+ #endif
+diff -Nur build_mod.orig/kcl_acpi.c build_mod/kcl_acpi.c
+--- build_mod.orig/kcl_acpi.c	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/kcl_acpi.c	2009-07-16 10:39:32.000000000 -0400
+@@ -76,7 +76,7 @@
+     struct acpi_buffer output;
+     union acpi_object *params = NULL;
+     union acpi_object *obj = NULL;
+-    struct acpi_namespace_node *parent_node, *node;
++    KCL_ACPI_DevHandle child_handle, next_child_handle;
+     char name[5] = {'\0'};
+     struct KCL_ACPI_MethodArgument *argument = NULL;
+     unsigned int i, count;
+@@ -224,10 +224,11 @@
+     if (ACPI_FAILURE(status))
+     {
+         /* if failed, try the child namespace node */
+-        parent_node = (struct acpi_namespace_node *)handle;
+-        node = parent_node->child;
+-        while ((node != NULL) && ( node != parent_node))
++        child_handle = NULL;
++        status = acpi_get_next_object (ACPI_TYPE_ANY, handle, child_handle, &next_child_handle);
++        while (ACPI_SUCCESS(status))
+         {
++            child_handle = next_child_handle;
+             switch(type)
+             {
+                 case ACPI_TYPE_INTEGER:
+@@ -246,15 +247,16 @@
+                     break;
+             }
+ 
+-            status = acpi_evaluate_object((acpi_handle)node, name, &input, &output);
++            status = acpi_evaluate_object(child_handle, name, &input, &output);
+             if (ACPI_SUCCESS(status))
+             {
+                 break;
+             }
+-            node = node->peer;
++            status = acpi_get_next_object (ACPI_TYPE_ANY, handle, child_handle, &next_child_handle);
+         }
+-        if ((node == NULL) || (node == parent_node))
++        if (ACPI_FAILURE(status))
+         {
++            status = KCL_ACPI_ERROR;
+             goto error;
+         }
+     }
+@@ -406,6 +408,7 @@
+  */
+ KCL_ACPI_CallbackHandle ATI_API_CALL KCL_ACPI_GetNotifyHandler(KCL_ACPI_DevHandle handle)
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
+     struct acpi_namespace_node *node = NULL;
+ 
+     node = (struct acpi_namespace_node *)handle;
+@@ -422,6 +425,11 @@
+         }
+     }
+     else
++#else
++    /* No alternative on 2.6.29 and later for now. The internal ACPI data
++     * structures are no longer included in the kernel headers. */
++    #warning "ACPI notification wrapping won't work."
++#endif
+     {
+         return NULL;
+     }
+@@ -433,6 +441,7 @@
+  */
+ KCL_ACPI_ContextHandle ATI_API_CALL KCL_ACPI_GetNotifyContext(KCL_ACPI_DevHandle handle)
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
+     struct acpi_namespace_node *node = NULL;
+ 
+     node = (struct acpi_namespace_node *)handle;
+@@ -449,6 +458,11 @@
+         }
+     }
+     else
++#else
++    /* No alternative on 2.6.29 and later for now. The internal ACPI data
++     * structures are no longer included in the kernel headers. */
++    #warning "ACPI notification wrapping won't work."
++#endif
+     {
+         return NULL;
+     }
+@@ -461,6 +475,7 @@
+  */
+ void ATI_API_CALL KCL_ACPI_UpdateNotifyHandler(KCL_ACPI_DevHandle handle, KCL_ACPI_CallbackHandle handler)
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
+     struct acpi_namespace_node *node = NULL;
+ 
+     node = (struct acpi_namespace_node *)handle;
+@@ -469,7 +484,11 @@
+     {
+         node->object->common_notify.device_notify->notify.handler = (acpi_notify_handler)handler;
+     }
+-
++#else
++    /* No alternative on 2.6.29 and later for now. The internal ACPI data
++     * structures are no longer included in the kernel headers. */
++    #warning "ACPI notification wrapping won't work."
++#endif
+     return;
+ }
+ 
+@@ -480,6 +499,7 @@
+  */
+ void ATI_API_CALL KCL_ACPI_UpdateNotifyContext(KCL_ACPI_DevHandle handle, KCL_ACPI_ContextHandle context)
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
+     struct acpi_namespace_node *node = NULL;
+ 
+     node = (struct acpi_namespace_node *)handle;
+@@ -488,7 +508,11 @@
+     {
+         node->object->common_notify.device_notify->notify.context = context;
+     }
+-
++#else
++    /* No alternative on 2.6.29 and later for now. The internal ACPI data
++     * structures are no longer included in the kernel headers. */
++    #warning "ACPI notification wrapping won't work."
++#endif
+     return;
+ }
+ 
+@@ -512,8 +536,16 @@
+  */
+ KCL_ACPI_DevHandle ATI_API_CALL KCL_ACPI_GetChildDevice(KCL_ACPI_DevHandle handle)
+ {
+-    struct acpi_namespace_node *node = (struct acpi_namespace_node *)handle;
+-    return (KCL_ACPI_DevHandle)node->child;
++    KCL_ACPI_DevHandle child_handle;
++    acpi_status status = acpi_get_next_object (ACPI_TYPE_ANY, handle, NULL, &child_handle);
++    if (ACPI_SUCCESS(status))
++    {
++        return child_handle;
++    }
++    else
++    {
++        return NULL;
++    }
+ }
+ 
+ /** \brief get peer device in ACPI namespace
+@@ -522,8 +554,16 @@
+  */
+ KCL_ACPI_DevHandle ATI_API_CALL KCL_ACPI_GetPeerDevice(KCL_ACPI_DevHandle handle)
+ {
+-    struct acpi_namespace_node *node = (struct acpi_namespace_node *)handle;
+-    return (KCL_ACPI_DevHandle)node->peer;
++    KCL_ACPI_DevHandle peer_handle;
++    acpi_status status = acpi_get_next_object (ACPI_TYPE_ANY, NULL, handle, &peer_handle);
++    if (ACPI_SUCCESS(status))
++    {
++        return peer_handle;
++    }
++    else
++    {
++        return NULL;
++    }
+ }
+ 
+ /** \brief called for Notify(VGA, 0x80)
+diff -Nur build_mod.orig/kcl_debug.c build_mod/kcl_debug.c
+--- build_mod.orig/kcl_debug.c	2009-07-25 02:59:54.000000000 -0400
++++ build_mod/kcl_debug.c	2009-07-16 10:39:32.000000000 -0400
+@@ -41,7 +41,7 @@
+ extern int ATI_API_CALL firegl_debug_kbd_handler(void);
+ extern int ATI_API_CALL firegl_debug_dump(void);
+ 
+-extern void* ATI_API_CALL KCL_MEM_SmallBufferAlloc(unsigned long size);
++extern void* ATI_API_CALL KCL_MEM_SmallBufferAllocAtomic(unsigned long size);
+ extern void ATI_API_CALL KCL_MEM_SmallBufferFree(void* p);
+ 
+ static void kcl_debug_sysrq_handler(int key,
+@@ -83,7 +83,7 @@
+ void ATI_API_CALL KCL_DEBUG_Print(const char* fmt, ...)
+ {
+ 
+-    char* buffer=KCL_MEM_SmallBufferAlloc(MAX_STRING_LENGTH);
++    char* buffer=KCL_MEM_SmallBufferAllocAtomic(MAX_STRING_LENGTH);
+     va_list marker;
+ 
+     if(buffer == NULL)
+@@ -144,7 +144,7 @@
+ 
+ void ATI_API_CALL __ke_printk(const char* fmt, ...)
+ {
+-    char* buffer=KCL_MEM_SmallBufferAlloc(MAX_STRING_LENGTH);
++    char* buffer=KCL_MEM_SmallBufferAllocAtomic(MAX_STRING_LENGTH);
+     va_list marker;
+ 
+     if(buffer ==NULL)

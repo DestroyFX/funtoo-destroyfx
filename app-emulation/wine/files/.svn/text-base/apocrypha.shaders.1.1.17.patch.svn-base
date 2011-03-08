@@ -1,0 +1,109 @@
+diff -Naur wine-1.1.17.orig/dlls/wined3d/baseshader.c wine-1.1.17/dlls/wined3d/baseshader.c
+--- wine-1.1.17.orig/dlls/wined3d/baseshader.c	2009-03-13 16:07:55.000000000 +0000
++++ wine-1.1.17/dlls/wined3d/baseshader.c	2009-03-14 13:11:59.627960442 +0000
+@@ -351,6 +351,11 @@
+             pToken += curOpcode->num_params;
+ 
+             /* Rep and Loop always use an integer constant for the control parameters */
++	    if (!This->baseShader.uses_int_consts && !pshader) {
++		/* need to reserve room for the int uniforms */
++		This->baseShader.limits.constant_float -= MAX_CONST_I;
++		TRACE_(d3d_shader)("Reserving int uniforms, adjusting constant_float for this vshader.\n");
++	    }
+             This->baseShader.uses_int_consts = TRUE;
+         } else if (WINED3DSIO_ENDLOOP == curOpcode->opcode ||
+                    WINED3DSIO_ENDREP == curOpcode->opcode) {
+@@ -473,6 +478,11 @@
+                     }
+                 }
+                 else if(WINED3DSPR_CONSTINT == regtype) {
++		   if (!This->baseShader.uses_int_consts && !pshader) {
++			/* need to reserve room for the int uniforms */
++			This->baseShader.limits.constant_float -= MAX_CONST_I;
++			TRACE_(d3d_shader)("Reserving int uniforms, adjusting constant_float for this vshader.\n");
++		    }
+                     This->baseShader.uses_int_consts = TRUE;
+                 }
+                 else if(WINED3DSPR_CONSTBOOL == regtype) {
+diff -Naur wine-1.1.17.orig/dlls/wined3d/directx.c wine-1.1.17/dlls/wined3d/directx.c
+--- wine-1.1.17.orig/dlls/wined3d/directx.c	2009-03-13 16:07:55.000000000 +0000
++++ wine-1.1.17/dlls/wined3d/directx.c	2009-03-14 13:11:59.631293572 +0000
+@@ -425,7 +425,8 @@
+     switch (vs_selected_mode) {
+         case SHADER_GLSL:
+             /* Subtract the other potential uniforms from the max available (bools, ints, and 1 row of projection matrix) */
+-            gl_info->max_vshader_constantsF = gl_info->vs_glsl_constantsF - (MAX_CONST_B / 4) - MAX_CONST_I - 1;
++            /* ints are reserved only when used */
++            gl_info->max_vshader_constantsF = gl_info->vs_glsl_constantsF - (MAX_CONST_B / 4) - 1;
+             break;
+         case SHADER_ARB:
+             /* We have to subtract any other PARAMs that we might use in our shader programs.
+@@ -968,14 +969,17 @@
+         }
+         if (gl_info->supported[ARB_VERTEX_SHADER]) {
+             glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB, &gl_max);
++            gl_max = wined3d_settings.max_vertex_uniforms_override ? wined3d_settings.max_vertex_uniforms_override : gl_max;
+             gl_info->vs_glsl_constantsF = gl_max / 4;
+             TRACE_(d3d_caps)("Max ARB_VERTEX_SHADER float constants: %u\n", gl_info->vs_glsl_constantsF);
+         }
+         if (gl_info->supported[ARB_FRAGMENT_SHADER]) {
+             glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB, &gl_max);
++            gl_max = wined3d_settings.max_fragment_uniforms_override ? wined3d_settings.max_fragment_uniforms_override : gl_max;
+             gl_info->ps_glsl_constantsF = gl_max / 4;
+             TRACE_(d3d_caps)("Max ARB_FRAGMENT_SHADER float constants: %u\n", gl_info->ps_glsl_constantsF);
+             glGetIntegerv(GL_MAX_VARYING_FLOATS_ARB, &gl_max);
++            gl_max = wined3d_settings.max_varying_override ? wined3d_settings.max_varying_override : gl_max;
+             gl_info->max_glsl_varyings = gl_max;
+             TRACE_(d3d_caps)("Max GLSL varyings: %u (%u 4 component varyings)\n", gl_max, gl_max / 4);
+         }
+diff -Naur wine-1.1.17.orig/dlls/wined3d/wined3d_main.c wine-1.1.17/dlls/wined3d/wined3d_main.c
+--- wine-1.1.17.orig/dlls/wined3d/wined3d_main.c	2009-03-13 16:07:55.000000000 +0000
++++ wine-1.1.17/dlls/wined3d/wined3d_main.c	2009-03-14 13:15:05.956490336 +0000
+@@ -304,6 +304,33 @@
+                 wined3d_settings.allow_multisampling = TRUE;
+             }
+         }
++        if ( !get_config_key( hkey, appkey, "MaxVertexUniforms", buffer, size) )
++        {
++            int TmpMaxVerts = atoi(buffer);
++            if(TmpMaxVerts > 0)
++            {
++                TRACE("Overriding glxinfo for GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB now set to %i\n", TmpMaxVerts);
++                wined3d_settings.max_vertex_uniforms_override = TmpMaxVerts;
++            }
++        }
++        if ( !get_config_key( hkey, appkey, "MaxFragmentUniforms", buffer, size) )
++        {
++            int TmpMaxFrags = atoi(buffer);
++            if(TmpMaxFrags > 0)
++            {
++                TRACE("Overriding glxinfo for GL_MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB now set to %i\n", TmpMaxFrags);
++                wined3d_settings.max_fragment_uniforms_override = TmpMaxFrags;
++            }
++        }
++        if ( !get_config_key( hkey, appkey, "MaxVaryings", buffer, size) )
++        {
++            int TmpMaxVarying = atoi(buffer);
++            if(TmpMaxVarying > 0)
++            {
++                TRACE("Overriding glxinfo for GL_MAX_VARYING_FLOATS_ARB now set to %i\n", TmpMaxVarying);
++                wined3d_settings.max_varying_override = TmpMaxVarying;
++            }
++        }
+     }
+     if (wined3d_settings.vs_mode == VS_HW)
+         TRACE("Allow HW vertex shaders\n");
+diff -Naur wine-1.1.17.orig/dlls/wined3d/wined3d_private.h wine-1.1.17/dlls/wined3d/wined3d_private.h
+--- wine-1.1.17.orig/dlls/wined3d/wined3d_private.h	2009-03-13 16:07:55.000000000 +0000
++++ wine-1.1.17/dlls/wined3d/wined3d_private.h	2009-03-14 13:11:59.654625847 +0000
+@@ -298,6 +298,10 @@
+   unsigned int emulated_textureram;
+   char *logo;
+   int allow_multisampling;
++/* overrides for GL_MAX_* parameters */
++  int max_vertex_uniforms_override;
++  int max_fragment_uniforms_override;
++  int max_varying_override;
+ } wined3d_settings_t;
+ 
+ extern wined3d_settings_t wined3d_settings;
