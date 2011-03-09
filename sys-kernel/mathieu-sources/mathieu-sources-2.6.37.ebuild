@@ -13,7 +13,7 @@ KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~sh ~sparc ~x86"
 IUSE=""
 HOMEPAGE="http://dev.gentoo.org/~dsd/genpatches"
 
-MATHIEUPATCHES_VER="1.1.0"
+MATHIEUPATCHES_VER="1.1.1"
 MATHIEUPATCHES="mathieu-patches-${MATHIEUPATCHES_VER}.tar.bz2"
 MATHIEUPATCHES_URI="http://cosmicencounter.net/mirror/mathieu-sources/${MATHIEUPATCHES}"
 
@@ -26,7 +26,7 @@ pkg_setup(){
         ewarn
         ewarn "${PN} is *not* supported by the Gentoo Kernel Project in any way."
         ewarn "If you need support, please contact the Mathieu directly"
-	ewarn "at mathieu@tbonline.ca. Or contact the patch author."
+	ewarn "at b747xx@gmail.com. Or contact the patch author."
         ewarn
 	ewarn "Patches:"
 	ewarn "1>Reiser4 file system support"
