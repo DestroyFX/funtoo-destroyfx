@@ -235,7 +235,7 @@ src_configure() {
 		elog "    Svga: VMWare Virtual GPU driver."
 		echo
 		myconf="${myconf}
-			--with-state-trackers=glx,dri,egl,vega$(use d3d && echo ",d3d1x")
+			--enable-texture-float --with-state-trackers=glx,dri,egl,vega$(use d3d && echo ",d3d1x")
 			$(use_enable llvm gallium-llvm)
 			$(use_enable gles gles1)
 			$(use_enable gles gles2)
